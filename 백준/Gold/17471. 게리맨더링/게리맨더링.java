@@ -1,113 +1,108 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.StringTokenizer;
+import java.io.*;
+import java.util.*;
 
 public class Main {
-	static ArrayList<Integer>[] adj;
+	static ArrayList<Integer>[] ward;
+	static int N, minDif;
 	static int[] population;
-	static int N, startIdx, total = 0, result = Integer.MAX_VALUE;
-	static boolean pick[];
-	static ArrayDeque<Integer> queue = new ArrayDeque<>();
+	static boolean picked[];
 
-	public static void main(String[] args) throws NumberFormatException, IOException {
+	public static void main(String[] args) throws IOException {
+
 		BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(bf.readLine());
-
+		ward = new ArrayList[N];
+		for (int i = 0; i < N; i++)
+			ward[i] = new ArrayList<>();
 		population = new int[N];
-		adj = new ArrayList[N];
+		picked = new boolean[N];
+		minDif = Integer.MAX_VALUE;
+
 		StringTokenizer st = new StringTokenizer(bf.readLine());
 		for (int i = 0; i < N; i++) {
 			population[i] = Integer.parseInt(st.nextToken());
-			total += population[i];
-			adj[i] = new ArrayList<Integer>();
 		}
 
 		for (int i = 0; i < N; i++) {
 			st = new StringTokenizer(bf.readLine());
-			int nearN = Integer.parseInt(st.nextToken());
-
-			for (int j = 0; j < nearN; j++) {
-				adj[i].add(Integer.parseInt(st.nextToken()) - 1);
+			int num = Integer.parseInt(st.nextToken());
+			for (int j = 0; j < num; j++) {
+				int a = Integer.parseInt(st.nextToken()) - 1;
+				ward[i].add(a);
 			}
-
 		}
 
-		pick = new boolean[N];
-		dfs(0);
-		System.out.println(result == Integer.MAX_VALUE ? -1 : result);
+		makePart(0);
+		System.out.println(minDif == Integer.MAX_VALUE ? -1 : minDif);
 	}
 
-	static void dfs(int start) {
-		if (start == N) {
-			// 로직
-			check();
+	// 부분 집합
+	static void makePart(int n) {
+		if (n == N) {
+			// 확인하기
+			checkNum();
 			return;
 		}
 
-		pick[start] = true;
-		dfs(start + 1);
-
-		pick[start] = false;
-		dfs(start + 1);
+		picked[n] = true;
+		makePart(n + 1);
+		picked[n] = false;
+		makePart(n + 1);
 	}
 
-	static void check() {
+	static void checkNum() {
+		// 나눠진 선거구가 이어지는지 확인하기
+		// 각각 개수 맞는지 세야함
+		int pNum = func(true);
+		int unpNum = func(false);
 
-		int aCnt = 0, sum = 0;
+		
+		if (pNum == 0 || unpNum == 0 || pNum + unpNum != N)
+			return;
+
+		int pickedCnt = 0;
+		int unPickedCnt = 0;
 
 		for (int i = 0; i < N; i++) {
-			if (pick[i]) {
-				aCnt++;
-				sum += population[i];
-			}
+			if (picked[i])
+				pickedCnt += population[i];
+			else
+				unPickedCnt += population[i];
 		}
+		minDif = Math.min(minDif, Math.abs(pickedCnt - unPickedCnt));
 
-		if (!isConnected(true, aCnt))
-			return;
-		if (!isConnected(false, N - aCnt))
-			return;
-
-		result = Math.min(result, Math.abs(sum - (total - sum)));
 	}
 
-	// 검사할 그룹 값. true면 pick이 true인 것들, false면 pick이 false인 것들 연결성 검사
-	// 해당 그룹에 속한 정점 개수 넘겨주기
-	static boolean isConnected(boolean target, int needCnt) {
+	static int func(boolean in) {
+		boolean use[] = new boolean[N];
+
 		int start = -1;
-		// 그룹 내부에 있는 정점으로 시작점 잡기
 		for (int i = 0; i < N; i++) {
-			if (pick[i] == target) {
+			if (picked[i] == in) {
 				start = i;
 				break;
 			}
 		}
 		if (start == -1)
-			return false;
+			return 0;
 
-		boolean[] check = new boolean[N]; // 방문 체크
-		ArrayDeque<Integer> queue = new ArrayDeque<Integer>();
-		queue.add(start);
-		check[start] = true;
 		int cnt = 1;
 
-		while (!queue.isEmpty()) {
-			int cur = queue.poll();
-			for (int nxt : adj[cur]) {
-				if (pick[nxt] != target)
-					continue; // 같은 그룹에 속한 정점으로만 이동
-				if (check[nxt])
+		ArrayDeque<Integer> q = new ArrayDeque<>();
+		q.add(start);
+		use[start] = true;
+		
+		while (!q.isEmpty()) {
+			int cur = q.poll();
+			for (int i = 0; i < ward[cur].size(); i++) {
+				int n = ward[cur].get(i);
+				if(use[n] || picked[n] != in)
 					continue;
-				check[nxt] = true;
-				queue.add(nxt);
+				use[n] = true;
+				q.add(n);
 				cnt++;
 			}
 		}
-		return cnt == needCnt;
-
+		return cnt;
 	}
-
 }
